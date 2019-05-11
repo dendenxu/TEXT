@@ -1,4 +1,9 @@
 /*
+5-11-2019 update:
+- serif fonts better supported
+- you look at the graphic window, not so many differences can be found.
+- you look at the source, you'll notice the REPAINT action was completely rewritten.
+
 4-29-2019 update:
 - fixed problem when trying to add a letter after shifting the position of the cursor
 - tring Consolas as an output font
@@ -27,9 +32,6 @@ Modifications are supported.
 	- font color
 	- background(black or white)
 
-
-Currently monospaced fonts are completely supported.
-Particular letters may be displayed incorrectly when using proportional font.
 */
 #include "graphics.h"
 #include "extgraph.h"

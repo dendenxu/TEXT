@@ -267,11 +267,11 @@ static void RegisterWindowClass(void);
 static LONG FAR PASCAL GraphicsEventProc(HWND w, UINT msg,
                                          WPARAM p1, LPARAM p2);
 static void CheckEvents(void);
-void DoUpdate(void);
+static void DoUpdate(void);
 void DisplayClear(void);
 static void PrepareToDraw(void);
-static void DisplayLine(double x, double y, double dx, double dy);
-static void DisplayArc(double xc, double yc, double rx, double ry,
+void DisplayLine(double x, double y, double dx, double dy);
+void DisplayArc(double xc, double yc, double rx, double ry,
                        double start, double sweep);
 static void RenderArc(double x, double y, double rx, double ry,
                       double start, double sweep);
@@ -282,10 +282,10 @@ static void SetLineBB(RECT *rp, double x, double y, double dx, double dy);
 static void SetArcBB(RECT *rp, double xc, double yc,
                      double rx, double ry, double start, double sweep);
 void SetTextBB(RECT *rp, double x, double y, string text);
-static void StartPolygon(void);
-static void AddSegment(int x0, int y0, int x1, int y1);
-static void DisplayPolygon(void);
-static void AddPolygonPoint(int x, int y);
+void StartPolygon(void);
+void AddSegment(int x0, int y0, int x1, int y1);
+void DisplayPolygon(void);
+void AddPolygonPoint(int x, int y);
 static void InitColors(void);
 static int FindColorName(string name);
 
@@ -296,8 +296,8 @@ static int RectHeight(RECT *rp);
 static void SetRectFromSize(RECT *rp, int x, int y, int width, int height);
 static double Radians(double degrees);
 static int Round(double x);
-static double InchesX(int x);
-static double InchesY(int y);
+double InchesX(int x);
+double InchesY(int y);
 static int PixelsX(double x);
 static int PixelsY(double y);
 int ScaleX(double x);
@@ -793,7 +793,7 @@ void InitConsole(void)
 
 void repaint()
 {
-    InvalidateRect(graphicsWindow, NULL, 1);
+    InvalidateRect(graphicsWindow, NULL, 0);
     UpdateWindow(graphicsWindow);
 }
 
@@ -1210,11 +1210,11 @@ static void CheckEvents(void)
  * actual display context.
  */
 
-void DoUpdate(void)
+static void DoUpdate(void)
 {
     HDC dc;
-
     dc = BeginPaint(graphicsWindow, &ps);
+
     BitBlt(dc, 0, 0, pixelWidth, pixelHeight, osdc, 0, 0, SRCCOPY);
     EndPaint(graphicsWindow, &ps);
 }
@@ -1231,7 +1231,7 @@ void DisplayClear(void)
     RECT r;
 
     SetRect(&r, 0, 0, pixelWidth, pixelHeight);
-    InvalidateRect(graphicsWindow, &r, TRUE);
+    InvalidateRect(graphicsWindow, &r, 0);
     BitBlt(osdc, 0, 0, pixelWidth, pixelHeight, osdc, 0, 0, WHITENESS);
 }
 
@@ -1279,7 +1279,7 @@ static void PrepareToDraw(void)
  * region instead.
  */
 
-static void DisplayLine(double x, double y, double dx, double dy)
+void DisplayLine(double x, double y, double dx, double dy)
 {
     int x0, y0, x1, y1;
     RECT r;
@@ -1290,7 +1290,11 @@ static void DisplayLine(double x, double y, double dx, double dy)
     x1 = ScaleX(x + dx);
     y1 = ScaleY(y + dy);
     if (regionState == NoRegion) {
-        SetLineBB(&r, x-1, y-1, dx+2, dy+2);
+        //SetLineBB(&r, x-1, y-1, dx+2, dy+2);
+		r.left = 0;
+		r.top = 0;
+		r.right = pixelWidth;
+		r.bottom = pixelHeight;
         InvalidateRect(graphicsWindow, &r, FALSE);
         MoveToEx(osdc, x0, y0, NULL);
         LineTo(osdc, x1, y1);
@@ -1310,7 +1314,7 @@ static void DisplayLine(double x, double y, double dx, double dy)
  * instead.
  */
 
-static void DisplayArc(double xc, double yc, double rx, double ry,
+void DisplayArc(double xc, double yc, double rx, double ry,
                        double start, double sweep)
 {
     RECT r;
@@ -1318,8 +1322,12 @@ static void DisplayArc(double xc, double yc, double rx, double ry,
     int ix0, iy0, ix1, iy1;
 
     PrepareToDraw();
-    SetArcBB(&r, xc, yc, rx, ry, start, sweep);
-    InvalidateRect(graphicsWindow, &r, TRUE);
+    //SetArcBB(&r, xc, yc, rx, ry, start, sweep);
+	r.left = 0;
+	r.top = 0;
+	r.right = pixelWidth;
+	r.bottom = pixelHeight;
+	InvalidateRect(graphicsWindow, &r, FALSE);
     xmin = ScaleX(xc - rx);
     ymin = ScaleY(yc + ry);
     xmax = xmin + PixelsX(2 * rx);
@@ -1394,7 +1402,7 @@ void DisplayText(double x, double y, string text)
     RECT r;
 
     PrepareToDraw();
-    //SetTextBB(&r, x, y, text);
+        //SetTextBB(&r, x, y, text);
 	r.left = 0;
 	r.top = 0;
 	r.right = pixelWidth;
@@ -1623,7 +1631,7 @@ void SetTextBB(RECT *rp, double x, double y, string text)
  * after calling DisplayPolygon.
  */
 
-static void StartPolygon(void)
+void StartPolygon(void)
 {
     polygonPoints = NewArray(PStartSize, POINT);
     polygonSize = PStartSize;
@@ -1631,20 +1639,20 @@ static void StartPolygon(void)
     SetRect(&polygonBounds, LargeInt, LargeInt, 0, 0);
 }
 
-static void AddSegment(int x0, int y0, int x1, int y1)
+void AddSegment(int x0, int y0, int x1, int y1)
 {
     if (nPolygonPoints == 0) AddPolygonPoint(x0, y0);
     AddPolygonPoint(x1, y1);
 }
 
-static void DisplayPolygon(void)
+void DisplayPolygon(void)
 {
     int px;
     HBRUSH brush, oldBrush;
     HPEN oldPen, fillPen;
 
     PrepareToDraw();
-    InvalidateRect(graphicsWindow, &polygonBounds, TRUE);
+	InvalidateRect(graphicsWindow, &polygonBounds, FALSE);
     if (eraseMode) {
         px = 0;
         fillPen = erasePen;
@@ -1674,7 +1682,7 @@ static void DisplayPolygon(void)
  * interface.
  */
 
-static void AddPolygonPoint(int x, int y)
+void AddPolygonPoint(int x, int y)
 {
     POINT *newPolygon;
     int i;
@@ -1851,12 +1859,12 @@ static int Round(double x)
  * vertical directions, the coordinates are treated separately.
  */
 
-static double InchesX(int x)
+double InchesX(int x)
 {
     return ((double) x / xResolution);
 }
 
-static double InchesY(int y)
+double InchesY(int y)
 {
     return ((double) y / yResolution);
 }
